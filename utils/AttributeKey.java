@@ -1,4 +1,4 @@
-package advanced_networking_lab.exercise5;
+package advanced_networking_lab.exercise5.utils;
 
 public class AttributeKey<V>
 {

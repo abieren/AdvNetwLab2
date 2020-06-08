@@ -3,6 +3,7 @@ package advanced_networking_lab.exercise5;
 import org.projectfloodlight.openflow.protocol.OFFlowMod;
 import org.projectfloodlight.openflow.protocol.OFPacketIn;
 import org.projectfloodlight.openflow.protocol.OFPortStatus;
+import org.projectfloodlight.openflow.protocol.match.Match;
 import org.projectfloodlight.openflow.protocol.match.MatchField;
 import org.projectfloodlight.openflow.types.DatapathId;
 
@@ -12,11 +13,15 @@ import net.floodlightcontroller.core.IOFSwitch;
 import net.floodlightcontroller.packet.Ethernet;
 import net.floodlightcontroller.util.OFMessageUtils;
 
+@SuppressWarnings("unused")
 public class OutputPrinter 
 {
-	public static void println(String output)
+	private static boolean printWithSwitchNumber = true;
+	
+	public static void println(IOFSwitch sw, String output)
 	{
-		System.out.println(output);
+		if (printWithSwitchNumber) System.out.println(String.format("[%d] %s", sw.getId().getLong(),output));
+		else System.out.println(String.format("%s", sw.getId().getLong(),output));
 	}
 	
 	public static void printPacketIn(IOFSwitch sw, OFPacketIn msg, FloodlightContext cntx)
@@ -29,10 +34,21 @@ public class OutputPrinter
 		String srcMAC = eth.getSourceMACAddress().toString();
 		String dstMAC = eth.getDestinationMACAddress().toString();
 		
-		String output = String.format("------->Packet In Event: switchNumber=%s, inPortNumber=%d, ethType=%s, srcMAC=%s, dstMAC=%s", 
-				switchNumber, inPortNumber, ethType, srcMAC, dstMAC);
+		// TODO entfernen
+		StringBuilder sb = new StringBuilder();
+		Match match = msg.getMatch();
+		for (MatchField<?> matchField : msg.getMatch().getMatchFields())
+		{
+			sb.append(matchField.getName());
+			sb.append(":");
+			sb.append(match.get(matchField).toString());
+			sb.append(" ");
+		}
 		
-		println(output);
+		String output = String.format("------->Packet In Event: switchNumber=%s, inPortNumber=%d, ethType=%s, srcMAC=%s, dstMAC=%s, matchFields=%s", 
+				switchNumber, inPortNumber, ethType, srcMAC, dstMAC, sb.toString());
+		
+		println(sw, output);
 	}
 	
 	public static void printPortStatus(IOFSwitch sw, OFPortStatus msg, FloodlightContext cntx)
@@ -44,16 +60,6 @@ public class OutputPrinter
 		String output = String.format("------->Port Status Event: switchNumber=%s, portNumber=%d, portStatus=%s",
 				switchNumber, portNumber, portStatus);
 		
-		println(output);
-	}
-	
-	
-	public static void printFlowDel()
-	{
-		int switchNumber;
-		int outPortNumber;
-		Object matchingFields; //???, gegebenenfalls
-		
-		String output = String.format("------->Flow Del Operation: ");
+		println(sw, output);
 	}
 }

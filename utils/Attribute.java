@@ -1,4 +1,4 @@
-package advanced_networking_lab.exercise5;
+package advanced_networking_lab.exercise5.utils;
 
 import java.util.Objects;
 
@@ -26,6 +26,7 @@ public class Attribute<O, V>
 	{
 		if (obj == this) return true;
 		if (!(obj instanceof Attribute)) return false;
+		@SuppressWarnings("rawtypes")
 		Attribute o = (Attribute) obj;
 		return Objects.equals(object, o.object) && 
 				Objects.equals(key, o.key) &&

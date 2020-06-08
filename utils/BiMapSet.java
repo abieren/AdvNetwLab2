@@ -1,4 +1,4 @@
-package advanced_networking_lab.exercise5;
+package advanced_networking_lab.exercise5.utils;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,7 +10,7 @@ public class BiMapSet<K, V>
 	private Map<K, HashSet<V>> mapKeyValue = new HashMap<>();
 	private Map<V, HashSet<K>> mapValueKey = new HashMap<>();
 
-	private static <Key, Value> void ensureKeyIsInitialized(Map<Key, HashSet<Value>> map, Key key)
+	private synchronized static <Key, Value> void ensureKeyIsInitialized(Map<Key, HashSet<Value>> map, Key key)
 	{
 		if (!map.containsKey(key)) 
 		{
@@ -18,7 +18,7 @@ public class BiMapSet<K, V>
 		}
 	}
 	
-	public boolean add(K key, V value)
+	public synchronized boolean add(K key, V value)
 	{
 		boolean inserted = false;
 		// add forward mapping
@@ -31,22 +31,22 @@ public class BiMapSet<K, V>
 		return inserted;
 	}
 	
-	public boolean contains(K key, V value)
+	public synchronized boolean contains(K key, V value)
 	{
 		return mapKeyValue.containsKey(key) && mapKeyValue.get(key).contains(value);
 	}
 	
-	public boolean containsKey(K key)
+	public synchronized boolean containsKey(K key)
 	{
 		return mapKeyValue.containsKey(key);
 	}
 	
-	public boolean containsValue(V value)
+	public synchronized boolean containsValue(V value)
 	{
 		return mapValueKey.containsKey(value);
 	}
 	
-	public boolean remove(K key, V value)
+	public synchronized boolean remove(K key, V value)
 	{
 		boolean removed = false;
 		if (contains(key, value))
@@ -59,24 +59,24 @@ public class BiMapSet<K, V>
 		return removed;
 	}
 	
-	public Set<V> getValuesByKey(K key)
+	public synchronized Set<V> getValuesByKey(K key)
 	{
 		if (mapKeyValue.containsKey(key)) return new HashSet<>(mapKeyValue.get(key));
 		else return new HashSet<>();	
 	}
 	
-	public Set<K> getKeysByValue(V value)
+	public synchronized Set<K> getKeysByValue(V value)
 	{
 		if (mapValueKey.containsKey(value)) return new HashSet<>(mapValueKey.get(value));
 		else return new HashSet<>();		
 	}
 	
-	public Set<K> getKeySet()
+	public synchronized Set<K> getKeySet()
 	{
 		return new HashSet<>(mapKeyValue.keySet());
 	}
 	
-	public Set<V> getValueSet()
+	public synchronized Set<V> getValueSet()
 	{
 		return new HashSet<>(mapValueKey.keySet());
 	}	
