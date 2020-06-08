@@ -1,10 +1,14 @@
 package advanced_networking_lab.exercise5;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import org.projectfloodlight.openflow.protocol.OFFlowAdd;
 import org.projectfloodlight.openflow.protocol.OFPacketIn;
+import org.projectfloodlight.openflow.protocol.OFPacketOut;
+import org.projectfloodlight.openflow.protocol.OFPortDesc;
 import org.projectfloodlight.openflow.types.ArpOpcode;
 import org.projectfloodlight.openflow.types.DatapathId;
 import org.projectfloodlight.openflow.types.ICMPv4Type;
@@ -14,6 +18,10 @@ import org.projectfloodlight.openflow.types.OFPort;
 
 import javafx.util.Pair;
 import net.floodlightcontroller.core.IOFSwitch;
+import net.floodlightcontroller.core.internal.ISwitchDriverRegistry;
+import net.floodlightcontroller.packet.IPacket;
+import net.floodlightcontroller.packet.PacketParsingException;
+import net.floodlightcontroller.util.OFMessageUtils;
 
 public class TopologyManager
 {
@@ -205,4 +213,77 @@ public class TopologyManager
 			}
 		}		
 	}
+	
+	public boolean isSwitchPort(OFPort port)
+	{
+		int portNumber = port.getPortNumber();
+		return 1 <= portNumber &&  portNumber <= 3;
+	}
+	
+	public boolean isHostPort(OFPort port)
+	{
+		int portNumber = port.getPortNumber();
+		// TODO take 100_000 as biggest host port for now to make check implementation easier
+		return 10 <= portNumber &&  portNumber <= 100_000;
+	}
+	
+	public void floodToSwitches(IOFSwitch sw, OFPacketIn packetIn)
+	{
+		Collection<OFPort> allPorts = sw.getPorts().stream()
+				.map(x->x.getPortNo())
+				.collect(Collectors.toList());
+		
+		Collection<OFPort> portsToSwitches = allPorts.stream()
+				.filter(x->isSwitchPort(x))
+				.collect(Collectors.toList());
+		
+		//TODO remove
+		OutputPrinter.println(sw, "special flooding");
+		
+		portsToSwitches.forEach(x -> {
+			Pair<OFPacketOut, String> packetOut = MessageBuilderV13.buildPacketOut(sw, packetIn, x);
+			OutputPrinter.println(sw, packetOut.getValue());
+			sw.write(packetOut.getKey());
+		});
+	}
+	
+	public void floodToHosts(IOFSwitch sw, OFPacketIn packetIn)
+	{
+		Collection<OFPort> allPorts = sw.getPorts().stream()
+				.map(x->x.getPortNo())
+				.collect(Collectors.toList());
+		
+		Collection<OFPort> portsToHost = allPorts.stream()
+				.filter(x->isHostPort(x))
+				.collect(Collectors.toList());
+		
+		//TODO remove
+		OutputPrinter.println(sw, "special flooding");
+		
+		portsToHost.forEach(x -> {
+			Pair<OFPacketOut, String> packetOut = MessageBuilderV13.buildPacketOut(sw, packetIn, x);
+			OutputPrinter.println(sw, packetOut.getValue());
+			sw.write(packetOut.getKey());
+		});
+	}
+	
+	public void floodWithoutLooping(IOFSwitch sw, OFPacketIn packetIn)
+	{
+		OFPort inPort = OFMessageUtils.getInPort(packetIn);
+		if (isHostPort(inPort))
+		{
+			floodToHosts(sw, packetIn);
+			floodToSwitches(sw, packetIn);
+		}
+		else if (isSwitchPort(inPort))
+		{
+			floodToHosts(sw, packetIn);
+			// do not flood to switch ports, since this will cause packet to loop
+		}
+		else
+		{
+			throw new RuntimeException("Port is not a host port nor a switch port.");
+		}
+	}
+	
 }

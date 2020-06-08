@@ -5,16 +5,14 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import org.projectfloodlight.openflow.protocol.OFFlowAdd;
 import org.projectfloodlight.openflow.protocol.OFMessage;
 import org.projectfloodlight.openflow.protocol.OFPacketIn;
 import org.projectfloodlight.openflow.protocol.OFPacketOut;
+import org.projectfloodlight.openflow.protocol.OFPortDesc;
 import org.projectfloodlight.openflow.protocol.OFPortStatus;
 import org.projectfloodlight.openflow.protocol.OFType;
 import org.projectfloodlight.openflow.types.ArpOpcode;
@@ -55,7 +53,7 @@ public class Exercise5
 	private AttributeStore<FlowOnSwitch> flowTable = new AttributeStore<>();
 	// stores all packet in messages
 	private AttributeStore<OFPacketIn> packetTable = new AttributeStore<>();
-	int currentTimeSlot;
+	int currentTimeSlot = 0;
 	
 	private TopologyManager topologyManager = new TopologyManager();
 	
@@ -111,7 +109,7 @@ public class Exercise5
 
 	
 	@Override
-	public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
+	public synchronized Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
 		// messages to receive: packet in, port status
 		// distinguish type of message an then handle it
 		
@@ -215,7 +213,11 @@ public class Exercise5
 		MacAddress srcMac = eth.getSourceMACAddress();
 		MacAddress dstMac = eth.getDestinationMACAddress();
 		ARP arp = (ARP)eth.getPayload();
-		ArpOpcode arpOpcode = arp.getOpCode();	
+		ArpOpcode arpOpcode = arp.getOpCode();
+		IPv4Address arpSenderIp = arp.getSenderProtocolAddress();
+		IPv4Address arpTargetIp = arp.getTargetProtocolAddress();
+		
+		rememberPacketInArp(msg, switchId, inPort, srcMac, dstMac, arpOpcode, arpSenderIp, arpTargetIp);
 
 		// check for expected arp opcodes
 		if (arpOpcode.equals(ArpOpcode.REQUEST)) 
@@ -239,7 +241,7 @@ public class Exercise5
 		if (dstMac.isBroadcast()) 
 		{
 			OutputPrinter.println(sw, "ARP: dstMac is broadcast. No flow creation possible.");
-			ableToCreateflow = false; 
+			ableToCreateflow = false;  
 		}
 		
 		OFPacketIn matchingPacket = null;
@@ -297,6 +299,8 @@ public class Exercise5
 		// if backward learning possible: create flow
 		if (ableToCreateflow)
 		{
+			OutputPrinter.println(sw, "ARP: create flow.");
+			
 			DatapathId matchedPacketSwitchId = packetTable.get(matchingPacket, PacketTableAttributes.SWITCH).value;
 			OFPort matchedPacketInPort = packetTable.get(matchingPacket, PacketTableAttributes.IN_PORT).value;
 			topologyManager.createARPFlow(sw,
@@ -313,7 +317,8 @@ public class Exercise5
 		{
 			// flood
 			// before flooding check if this particular message has already been seen on this switch
-			// with same arp opcode, src mac, dst mac and also arrives from a switch.
+			// with same arp opcode, src mac, dst mac, arp sender ip, arp target ip
+			// and also arrives from a switch.
 			Set<OFPacketIn> switches = packetTable
 					.getByKeyValue(PacketTableAttributes.SWITCH, switchId)
 					.stream()
@@ -338,40 +343,38 @@ public class Exercise5
 					.map(x->x.object)
 					.collect(Collectors.toSet());
 			
-			Set<OFPacketIn> packetsFromS1 = packetTable
-					.getByKeyValue(PacketTableAttributes.IN_PORT, OFPort.of(1))
+			Set<OFPacketIn> arpSenderIps = packetTable
+					.getByKeyValue(PacketTableAttributes.ARP_SENDER_IP, arpSenderIp)
 					.stream()
 					.map(x->x.object)
 					.collect(Collectors.toSet());
 			
-			Set<OFPacketIn> packetsFromS2 = packetTable
-					.getByKeyValue(PacketTableAttributes.IN_PORT, OFPort.of(2))
+			Set<OFPacketIn> arpTargetIps = packetTable
+					.getByKeyValue(PacketTableAttributes.ARP_TARGET_IP, arpTargetIp)
 					.stream()
 					.map(x->x.object)
 					.collect(Collectors.toSet());
 			
-			 Set<OFPacketIn> packetsFromS3 = packetTable
-					.getByKeyValue(PacketTableAttributes.IN_PORT, OFPort.of(3))
+			Set<OFPacketIn> packetsWithInPortsIsSwitch = packetTable
+					.getByKeyValue(PacketTableAttributes.IN_PORT_IS_SWITCH, true)
 					.stream()
 					.map(x->x.object)
 					.collect(Collectors.toSet());
-			
-			Set<OFPacketIn> unionPacketsFromS1S2S3 = SetHelper
-					.withOrig(packetsFromS1)
-					.union(packetsFromS2)
-					.union(packetsFromS3)
-					.getSame();
 			
 			Set<OFPacketIn> alreadySeen = SetHelper
 					.withOrig(arpOpcodes)
 					.intersection(switches)
 					.intersection(srcMacs)
 					.intersection(dstMacs)
-					.intersection(unionPacketsFromS1S2S3) // make sure packet came from one of the switches
+					.intersection(arpSenderIps)
+					.intersection(arpTargetIps)
+					.intersection(packetsWithInPortsIsSwitch) // get packets that came from one of the switches
 					.getSame();			
 			
-			if (alreadySeen.isEmpty())
+			if (alreadySeen.size() < 2)
 			{
+				OutputPrinter.println(sw, "ARP: flood.");
+				
 				Pair<OFPacketOut, String> flood = MessageBuilderV13.buildPacketOut(sw, msg, OFPort.FLOOD);
 				OutputPrinter.println(sw, flood.getValue());
 				sw.write(flood.getKey());
@@ -379,13 +382,25 @@ public class Exercise5
 			else
 			{
 				OutputPrinter.println(sw, "ARP: dont flood. packet is known.");
+				
+				synchronized(this){
+				System.out.println("[-- ");
+				System.out.println(sw.getId().toString());
+				System.out.println(alreadySeen.size());
+				System.out.println(packetTable.getByKey(PacketTableAttributes.TIME_SLOT).size());
+				System.out.println(alreadySeen.iterator().next() == msg);
+				System.out.println("--]");}
+				
+				if (inPort.getPortNumber() > 3 && arpOpcode.getOpcode() == ArpOpcode.REPLY.getOpcode())
+				{
+					throw new RuntimeException("ARP: UNEXPECTED CASE. PACKET SHOULD NOT BE KNOWN.");
+				}
 			}
 		}
-		
-		rememberPacketInArp(msg, switchId, inPort, srcMac, dstMac, arpOpcode);
 	}
 	
-	private void rememberPacketInArp(OFPacketIn msg, DatapathId switchId, OFPort inPort, MacAddress srcMac, MacAddress dstMac, ArpOpcode arpOpcode)
+	private void rememberPacketInArp(OFPacketIn msg, DatapathId switchId, OFPort inPort, MacAddress srcMac, MacAddress dstMac,
+			ArpOpcode arpOpcode, IPv4Address arpSenderIp, IPv4Address arpTargetIp)
 	{
 		packetTable.put(msg, PacketTableAttributes.TIME_SLOT, currentTimeSlot);
 		packetTable.put(msg, PacketTableAttributes.SWITCH, switchId);
@@ -394,6 +409,11 @@ public class Exercise5
 		packetTable.put(msg, PacketTableAttributes.DST_MAC, dstMac);
 		packetTable.put(msg, PacketTableAttributes.ETH_TYPE, EthType.ARP);
 		packetTable.put(msg, PacketTableAttributes.ARP_OPCODE, arpOpcode);
+		// also remember those two to distinguish different arp requests
+		packetTable.put(msg, PacketTableAttributes.ARP_SENDER_IP, arpSenderIp);
+		packetTable.put(msg, PacketTableAttributes.ARP_TARGET_IP, arpTargetIp);
+		// auxiliary attributes to make querying easier
+		packetTable.put(msg, PacketTableAttributes.IN_PORT_IS_SWITCH, switchId.getLong() <= 3);
 	}
 	
 	private void handlePacketInIcmp(IOFSwitch sw, OFPacketIn msg, FloodlightContext cntx)
@@ -408,17 +428,20 @@ public class Exercise5
 		ICMP icmp = (ICMP) ip.getPayload();
 		// TODO maybe wrong since byte and short does not match perfectly
 		ICMPv4Type icmpType = ICMPv4Type.of(icmp.getIcmpType()); 
+		byte sequenceNumber = icmp.getIcmpCode();
+		
+		rememberPacketInICMP(msg, switchId, inPort, srcIp, dstIp, icmpType);
 
 		// check for expected icmp types
 		if (icmpType.equals(ICMPv4Type.ECHO)) 
 		{
-			OutputPrinter.println(sw, String.format(">>>>>>>>>> ICMP Request: %s -> %s", 
-					srcIp.toString(), dstIp.toString()));
+			OutputPrinter.println(sw, String.format(">>>>>>>>>> ICMP Request: #%d %s -> %s", 
+					sequenceNumber, srcIp.toString(), dstIp.toString()));
 		}
 		else if (icmpType.equals(ICMPv4Type.ECHO_REPLY)) 
 		{
-			OutputPrinter.println(sw, String.format("<<<<<<<<<< ICMP Reply: %s -> %s", 
-					srcIp.toString(), dstIp.toString()));
+			OutputPrinter.println(sw, String.format("<<<<<<<<<< ICMP Reply: #%d %s -> %s", 
+					sequenceNumber, srcIp.toString(), dstIp.toString()));
 		}
 		else
 		{
@@ -429,7 +452,7 @@ public class Exercise5
 		boolean ableToCreateflow = true;
 		
 		/*
-		// TODO check again
+		// TODO check again if broadcast checking is necessary
 		if (dstIp.isBroadcast() || dstIp.) 
 		{
 			OutputPrinter.println(sw, "ARP: dstMac is broadcast. No flow creation possible.");
@@ -492,6 +515,8 @@ public class Exercise5
 		// if backward learning possible: create flow
 		if (ableToCreateflow)
 		{
+			OutputPrinter.println(sw, "ICMP: create flow.");
+			
 			DatapathId matchedPacketSwitchId = packetTable.get(matchingPacket, PacketTableAttributes.SWITCH).value;
 			OFPort matchedPacketInPort = packetTable.get(matchingPacket, PacketTableAttributes.IN_PORT).value;
 			topologyManager.createICMPFlow(sw,
@@ -533,40 +558,24 @@ public class Exercise5
 					.map(x->x.object)
 					.collect(Collectors.toSet());
 			
-			Set<OFPacketIn> packetsFromS1 = packetTable
-					.getByKeyValue(PacketTableAttributes.IN_PORT, OFPort.of(1))
+			Set<OFPacketIn> packetsWithInPortsIsSwitch = packetTable
+					.getByKeyValue(PacketTableAttributes.IN_PORT_IS_SWITCH, true)
 					.stream()
 					.map(x->x.object)
 					.collect(Collectors.toSet());
-			
-			Set<OFPacketIn> packetsFromS2 = packetTable
-					.getByKeyValue(PacketTableAttributes.IN_PORT, OFPort.of(2))
-					.stream()
-					.map(x->x.object)
-					.collect(Collectors.toSet());
-			
-			 Set<OFPacketIn> packetsFromS3 = packetTable
-					.getByKeyValue(PacketTableAttributes.IN_PORT, OFPort.of(3))
-					.stream()
-					.map(x->x.object)
-					.collect(Collectors.toSet());
-			
-			Set<OFPacketIn> unionPacketsFromS1S2S3 = SetHelper
-					.withOrig(packetsFromS1)
-					.union(packetsFromS2)
-					.union(packetsFromS3)
-					.getSame();
 			
 			Set<OFPacketIn> alreadySeen = SetHelper
 					.withOrig(icmpTypes)
 					.intersection(switches)
 					.intersection(srcIps)
 					.intersection(dstIps)
-					.intersection(unionPacketsFromS1S2S3) // make sure packet came from one of the switches
+					.intersection(packetsWithInPortsIsSwitch) // get packets that came from one of the switches  
 					.getSame();			
 			
-			if (alreadySeen.isEmpty())
+			if (alreadySeen.size() < 2)
 			{
+				OutputPrinter.println(sw, "ICMP: flood.");
+				
 				Pair<OFPacketOut, String> flood = MessageBuilderV13.buildPacketOut(sw, msg, OFPort.FLOOD);
 				OutputPrinter.println(sw, flood.getValue());
 				sw.write(flood.getKey());
@@ -576,8 +585,6 @@ public class Exercise5
 				OutputPrinter.println(sw, "ICMP: dont flood. packet is known.");
 			}
 		}
-		
-		rememberPacketInICMP(msg, switchId, inPort, srcIp, dstIp, icmpType);
 	}
 	
 	private void rememberPacketInICMP(OFPacketIn msg, DatapathId switchId, OFPort inPort, IPv4Address srcIp, IPv4Address dstIp, ICMPv4Type icmpType)
@@ -589,6 +596,8 @@ public class Exercise5
 		packetTable.put(msg, PacketTableAttributes.DST_IP, dstIp);
 		packetTable.put(msg, PacketTableAttributes.IP_PROTOCOL, IpProtocol.ICMP);
 		packetTable.put(msg, PacketTableAttributes.ICMP_TYPE, icmpType);
+		// auxiliary attributes to make querying easier
+		packetTable.put(msg, PacketTableAttributes.IN_PORT_IS_SWITCH, switchId.getLong() <= 3);
 	}
 	
 	private void handlePacketInOtherProtocol(IOFSwitch sw, OFPacketIn msg, FloodlightContext cntx)

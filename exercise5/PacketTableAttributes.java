@@ -18,7 +18,9 @@ public class PacketTableAttributes
 	public final static AttributeKey<DatapathId> SWITCH = new AttributeKey<>(DatapathId.class);
 	
 	public final static AttributeKey<OFPort> IN_PORT = new AttributeKey<>(OFPort.class);
-	public final static AttributeKey<OFPort> OUT_PORT = new AttributeKey<>(OFPort.class);
+	
+	// not needed right now
+	//public final static AttributeKey<OFPort> OUT_PORT = new AttributeKey<>(OFPort.class);
 	
 	// specific to arp
 	public final static AttributeKey<MacAddress> SRC_MAC = new AttributeKey<>(MacAddress.class);
@@ -26,6 +28,8 @@ public class PacketTableAttributes
 	public final static AttributeKey<EthType> ETH_TYPE = new AttributeKey<>(EthType.class);
 	
 	public final static AttributeKey<ArpOpcode> ARP_OPCODE = new AttributeKey<>(ArpOpcode.class);
+	public final static AttributeKey<IPv4Address> ARP_SENDER_IP = new AttributeKey<>(IPv4Address.class);
+	public final static AttributeKey<IPv4Address> ARP_TARGET_IP = new AttributeKey<>(IPv4Address.class);
 	
 	// specific to icmp
 	public final static AttributeKey<IPv4Address> SRC_IP = new AttributeKey<>(IPv4Address.class);
@@ -33,4 +37,7 @@ public class PacketTableAttributes
 	public final static AttributeKey<IpProtocol> IP_PROTOCOL = new AttributeKey<>(IpProtocol.class);
 	
 	public final static AttributeKey<ICMPv4Type> ICMP_TYPE = new AttributeKey<>(ICMPv4Type.class);
+	
+	// auxiliary attributes to make quering easier
+	public final static AttributeKey<Boolean> IN_PORT_IS_SWITCH = new AttributeKey<>(Boolean.class);
 }
