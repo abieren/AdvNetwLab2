@@ -13,7 +13,6 @@ import org.projectfloodlight.openflow.protocol.OFMessage;
 import org.projectfloodlight.openflow.protocol.OFPacketIn;
 import org.projectfloodlight.openflow.protocol.OFPacketOut;
 import org.projectfloodlight.openflow.protocol.OFPortDesc;
-import org.projectfloodlight.openflow.protocol.OFPortStatus;
 import org.projectfloodlight.openflow.protocol.OFType;
 import org.projectfloodlight.openflow.types.ArpOpcode;
 import org.projectfloodlight.openflow.types.DatapathId;
@@ -32,6 +31,9 @@ import net.floodlightcontroller.core.FloodlightContext;
 import net.floodlightcontroller.core.IFloodlightProviderService;
 import net.floodlightcontroller.core.IOFMessageListener;
 import net.floodlightcontroller.core.IOFSwitch;
+import net.floodlightcontroller.core.IOFSwitchListener;
+import net.floodlightcontroller.core.PortChangeType;
+import net.floodlightcontroller.core.internal.IOFSwitchService;
 import net.floodlightcontroller.core.module.FloodlightModuleContext;
 import net.floodlightcontroller.core.module.FloodlightModuleException;
 import net.floodlightcontroller.core.module.IFloodlightModule;
@@ -44,18 +46,17 @@ import net.floodlightcontroller.util.OFMessageUtils;
 
 
 public class Exercise5
-	implements IFloodlightModule, IOFMessageListener
+	implements IFloodlightModule, IOFMessageListener, IOFSwitchListener
 {
+	// these members get initialized once
 	private IFloodlightProviderService floodlightProvider;
-	
-	
-	// stores all flows
-	private AttributeStore<FlowOnSwitch> flowTable = new AttributeStore<>();
-	// stores all packet in messages
-	private AttributeStore<OFPacketIn> packetTable = new AttributeStore<>();
-	int currentTimeSlot = 0;
-	
+	private IOFSwitchService switchService;
 	private TopologyManager topologyManager = new TopologyManager();
+		
+	// these members get reset when a port status change message arrives
+	// stores all packet in messages
+	private AttributeStore<OFPacketIn> packetTable;
+	int currentTimeSlot;
 	
 	@Override
 	public Collection<Class<? extends IFloodlightService>> getModuleServices() {
@@ -74,6 +75,7 @@ public class Exercise5
         Collection<Class<? extends IFloodlightService>> l = 
                 new ArrayList<Class<? extends IFloodlightService>>();
         l.add(IFloodlightProviderService.class);
+        l.add(IOFSwitchService.class);
         return l;
 	}
 
@@ -81,6 +83,9 @@ public class Exercise5
 	public void init(FloodlightModuleContext context) throws FloodlightModuleException {
 		System.out.println(String.format("%s init", Exercise5.class.getName()));
 		floodlightProvider = context.getServiceImpl(IFloodlightProviderService.class);
+		switchService = context.getServiceImpl(IOFSwitchService.class);
+		// reset for initialization
+		resetOnPortStatusMessage();
 	}
 	
 	@Override
@@ -89,7 +94,13 @@ public class Exercise5
 		
 		// messages to receive: packet in, port status
 		floodlightProvider.addOFMessageListener(OFType.PACKET_IN, this);
-		floodlightProvider.addOFMessageListener(OFType.PORT_STATUS, this);
+		switchService.addOFSwitchListener(this);
+	}
+	
+	public void resetOnPortStatusMessage()
+	{
+		packetTable = new AttributeStore<>();
+		currentTimeSlot = 0;
 	}
 
 	@Override
@@ -109,7 +120,7 @@ public class Exercise5
 
 	
 	@Override
-	public synchronized Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
+	public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
 		// messages to receive: packet in, port status
 		// distinguish type of message an then handle it
 		
@@ -120,14 +131,8 @@ public class Exercise5
 		{
 			handlePacketIn(sw, (OFPacketIn)msg, cntx);
 		}
-		else if (msg instanceof OFPortStatus)
-		{
-			System.out.println("////////////////////////////////");
-			handlePortStatus(sw, (OFPortStatus)msg, cntx);
-		}
 		else
 		{
-			System.out.println("////////////////////////////////");
 			handleUnexpectedMessage(sw, msg, cntx);
 		}
 		
@@ -382,19 +387,6 @@ public class Exercise5
 			else
 			{
 				OutputPrinter.println(sw, "ARP: dont flood. packet is known.");
-				
-				synchronized(this){
-				System.out.println("[-- ");
-				System.out.println(sw.getId().toString());
-				System.out.println(alreadySeen.size());
-				System.out.println(packetTable.getByKey(PacketTableAttributes.TIME_SLOT).size());
-				System.out.println(alreadySeen.iterator().next() == msg);
-				System.out.println("--]");}
-				
-				if (inPort.getPortNumber() > 3 && arpOpcode.getOpcode() == ArpOpcode.REPLY.getOpcode())
-				{
-					throw new RuntimeException("ARP: UNEXPECTED CASE. PACKET SHOULD NOT BE KNOWN.");
-				}
 			}
 		}
 	}
@@ -606,14 +598,59 @@ public class Exercise5
 		//System.out.println("handlePacketInOtherProtocol");
 	}
 	
-	private void handlePortStatus(IOFSwitch sw, OFPortStatus msg, FloodlightContext cntx)
-	{
-		System.out.println("###################################");
-		OutputPrinter.printPortStatus(sw, msg, cntx);
-	}
-	
 	private void handleUnexpectedMessage(IOFSwitch sw, OFMessage msg, FloodlightContext cntx)
 	{
-		throw new RuntimeException("Unexpected OFMessage");
+		throw new RuntimeException("Unexpected type of OFMessage");
+	}
+
+	@Override
+	public void switchAdded(DatapathId switchId) 
+	{
+		OutputPrinter.println(switchId, "switch added.");
+	}
+	
+	@Override
+	public void switchChanged(DatapathId switchId) 
+	{
+		OutputPrinter.println(switchId, "switch changed.");	
+	}
+
+	@Override
+	public void switchRemoved(DatapathId switchId)
+	{
+		OutputPrinter.println(switchId, "switch removed.");	
+	}
+
+	@Override
+	public void switchActivated(DatapathId switchId) 
+	{
+		OutputPrinter.println(switchId, "switch activated.");
+	}
+
+	@Override
+	public void switchDeactivated(DatapathId switchId) 
+	{
+		OutputPrinter.println(switchId, "switch deactivated.");
+	}
+	
+	@Override
+	public void switchPortChanged(DatapathId switchId, OFPortDesc port, PortChangeType type) 
+	{
+		OutputPrinter.printPortStatus(switchId, port, type);		
+		
+		if (type.equals(PortChangeType.UP))
+		{
+			resetOnPortStatusMessage();
+			topologyManager.onPortStateChanged(switchId, port.getPortNo(), true);
+		}
+		else if (type.equals(PortChangeType.DOWN))
+		{
+			resetOnPortStatusMessage();
+			topologyManager.onPortStateChanged(switchId, port.getPortNo(), false);
+		}
+		else
+		{
+			// dont react to other port change types
+		}		
 	}
 }

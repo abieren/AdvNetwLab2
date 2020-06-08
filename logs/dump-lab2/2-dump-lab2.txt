@@ -1,0 +1,17 @@
+=================================================
+Flow Counts S1/S2/S3 \(deduct 2\):
+2
+2
+2
+S1 Flows ----------->
+OFPST_FLOW reply (OF1.3) (xid=0x2):
+ cookie=0x0, duration=54.461s, table=0, n_packets=108, n_bytes=19994, priority=0 actions=CONTROLLER:65535
+-----------------------------------------------------------
+S2 Flows ----------->
+OFPST_FLOW reply (OF1.3) (xid=0x2):
+ cookie=0x0, duration=54.477s, table=0, n_packets=104, n_bytes=19654, priority=0 actions=CONTROLLER:65535
+-----------------------------------------------------------
+S3 Flows ----------->
+OFPST_FLOW reply (OF1.3) (xid=0x2):
+ cookie=0x0, duration=54.489s, table=0, n_packets=111, n_bytes=20496, priority=0 actions=CONTROLLER:65535
+-----------------------------------------------------------

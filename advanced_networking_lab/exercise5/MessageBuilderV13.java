@@ -5,8 +5,8 @@ import java.util.List;
 
 import org.projectfloodlight.openflow.protocol.OFFactory;
 import org.projectfloodlight.openflow.protocol.OFFlowAdd;
+import org.projectfloodlight.openflow.protocol.OFFlowDelete;
 import org.projectfloodlight.openflow.protocol.OFFlowMod;
-import org.projectfloodlight.openflow.protocol.OFMessage;
 import org.projectfloodlight.openflow.protocol.OFPacketIn;
 import org.projectfloodlight.openflow.protocol.OFPacketOut;
 import org.projectfloodlight.openflow.protocol.OFPacketOut.Builder;
@@ -21,15 +21,17 @@ import org.projectfloodlight.openflow.types.IPv4Address;
 import org.projectfloodlight.openflow.types.IpProtocol;
 import org.projectfloodlight.openflow.types.MacAddress;
 import org.projectfloodlight.openflow.types.OFPort;
+import org.projectfloodlight.openflow.types.U64;
 
 import javafx.util.Pair;
 import net.floodlightcontroller.core.IOFSwitch;
-import net.floodlightcontroller.util.MatchUtils;
 import net.floodlightcontroller.util.OFMessageUtils;
 
 public class MessageBuilderV13
 {
 	public static final OFFactory ofFactory = new OFFactoryVer13();
+	// use this cookie to select all flows made by this application
+	public static final U64 COOKIE = U64.of(1337);
 	
 	public static String buildPacketOutLogOutput(IOFSwitch sw, OFPort outPort)
 	{
@@ -55,7 +57,7 @@ public class MessageBuilderV13
             
         String output = buildPacketOutLogOutput(sw, outPort);
         
-        return new Pair<OFPacketOut, String>(packetOutBuilder.build(), output);	
+        return new Pair<>(packetOutBuilder.build(), output);	
 	}
 	
 	public static Pair<OFPacketOut, String> buildPacketOutReinsertPacketIn(IOFSwitch sw, OFPacketIn packetIn)
@@ -71,7 +73,7 @@ public class MessageBuilderV13
 		
 		String output = buildPacketOutLogOutput(sw, outPort);
 		
-		return new Pair<OFPacketOut, String>(packetOut, output);
+		return new Pair<>(packetOut, output);
 	}
 	
 	private static String buildFlowModLogOutput(IOFSwitch sw, OFPort outPort, OFFlowMod flow)
@@ -110,6 +112,7 @@ public class MessageBuilderV13
 				ActionBuilderV13.buildOutput(outPort));
 		
 		OFFlowAdd flowAdd = ofFactory.buildFlowAdd()
+				.setCookie(COOKIE) // use this cookie to select this flow
 				.setIdleTimeout(0) // never delete through timeout
 				.setHardTimeout(0) // never delete through timeout
 				.setPriority(10)
@@ -119,7 +122,7 @@ public class MessageBuilderV13
 		
 		String output = buildFlowModLogOutput(sw, outPort, flowAdd);
 		
-		return new Pair<OFFlowAdd, String>(flowAdd, output);
+		return new Pair<>(flowAdd, output);
 	}
 
 	public static Pair<OFFlowAdd, String> buildFlowAddIcmp(IOFSwitch sw,
@@ -140,6 +143,7 @@ public class MessageBuilderV13
 				ActionBuilderV13.buildOutput(outPort));
 		
 		OFFlowAdd flowAdd = ofFactory.buildFlowAdd()
+				.setCookie(COOKIE) // use this cookie to select this flow
 				.setIdleTimeout(0) // never delete through timeout
 				.setHardTimeout(0) // never delete through timeout
 				.setPriority(10)
@@ -149,8 +153,38 @@ public class MessageBuilderV13
 		
 		String output = buildFlowModLogOutput(sw, outPort, flowAdd);
 		
-		return new Pair<OFFlowAdd, String>(flowAdd, output);
+		return new Pair<>(flowAdd, output);
 	}
 	
+	private static String buildFlowDeleteLogOutput(IOFSwitch sw, OFFlowDelete flow)
+	{
+		long switchNumber = sw.getId().getLong();
+		
+		StringBuilder sb = new StringBuilder();
+		Match match = flow.getMatch();
+		for (MatchField<?> matchField : flow.getMatch().getMatchFields())
+		{
+			sb.append(matchField.getName());
+			sb.append(":");
+			sb.append(match.get(matchField).toString());
+			sb.append(" ");
+		}
+
+		String output = String.format("------->Flow Del Operation: switchNumber=%d, matchFields=%s",
+				switchNumber, sb.toString());
+		return output;
+	}
 	
+	public static Pair<OFFlowDelete, String> buildFlowDeleteAllFlows(IOFSwitch sw) 
+	{
+		
+		OFFlowDelete flowDelete = ofFactory.buildFlowDelete()
+				.setCookie(COOKIE)
+				.setCookieMask(COOKIE)
+				.build();
+		
+		String output = buildFlowDeleteLogOutput(sw, flowDelete);
+		
+		return new Pair<>(flowDelete, output);
+	}
 }

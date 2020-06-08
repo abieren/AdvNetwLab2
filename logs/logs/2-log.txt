@@ -1,0 +1,27 @@
+2020-06-08 14:32:01.130 INFO  [n.f.c.i.OFChannelHandler] New switch connection from /127.0.0.1:44064
+2020-06-08 14:32:01.205 INFO  [n.f.c.i.OFChannelHandler] [[? from 127.0.0.1:44064]] Disconnected connection
+2020-06-08 14:32:02.960 INFO  [n.f.c.i.OFChannelHandler] New switch connection from /127.0.0.1:44065
+2020-06-08 14:32:02.961 INFO  [n.f.c.i.OFChannelHandler] New switch connection from /127.0.0.1:44066
+2020-06-08 14:32:02.979 INFO  [n.f.c.i.OFChannelHandler] New switch connection from /127.0.0.1:44067
+2020-06-08 14:32:03.2 INFO  [n.f.c.i.OFChannelHandler] Negotiated down to switch OpenFlow version of OF_13 for /127.0.0.1:44066 using lesser hello header algorithm.
+2020-06-08 14:32:03.10 INFO  [n.f.c.i.OFChannelHandler] Negotiated down to switch OpenFlow version of OF_13 for /127.0.0.1:44065 using lesser hello header algorithm.
+2020-06-08 14:32:03.21 INFO  [n.f.c.i.OFChannelHandler] Negotiated down to switch OpenFlow version of OF_13 for /127.0.0.1:44067 using lesser hello header algorithm.
+2020-06-08 14:32:03.190 INFO  [n.f.c.i.OFSwitchHandshakeHandler] Switch OFSwitch DPID[00:00:00:00:00:00:00:03] bound to class class net.floodlightcontroller.core.internal.OFSwitch, description SwitchDescription [manufacturerDescription=Nicira, Inc., hardwareDescription=Open vSwitch, softwareDescription=2.3.90, serialNumber=None, datapathDescription=None]
+2020-06-08 14:32:03.192 INFO  [n.f.c.i.OFSwitchHandshakeHandler] Switch OFSwitch DPID[00:00:00:00:00:00:00:02] bound to class class net.floodlightcontroller.core.internal.OFSwitch, description SwitchDescription [manufacturerDescription=Nicira, Inc., hardwareDescription=Open vSwitch, softwareDescription=2.3.90, serialNumber=None, datapathDescription=None]
+2020-06-08 14:32:03.201 INFO  [n.f.c.i.OFSwitchHandshakeHandler] Switch OFSwitch DPID[00:00:00:00:00:00:00:01] bound to class class net.floodlightcontroller.core.internal.OFSwitch, description SwitchDescription [manufacturerDescription=Nicira, Inc., hardwareDescription=Open vSwitch, softwareDescription=2.3.90, serialNumber=None, datapathDescription=None]
+2020-06-08 14:32:03.760 INFO  [n.f.c.i.OFSwitchHandshakeHandler] Defining switch role from config file: ROLE_MASTER
+2020-06-08 14:32:03.760 INFO  [n.f.c.i.OFSwitchHandshakeHandler] Defining switch role from config file: ROLE_MASTER
+2020-06-08 14:32:03.762 INFO  [n.f.c.i.OFSwitchHandshakeHandler] Defining switch role from config file: ROLE_MASTER
+2020-06-08 14:32:03.768 INFO  [n.f.c.i.OFSwitchHandshakeHandler] Clearing flow tables of 00:00:00:00:00:00:00:01 on upcoming transition to MASTER.
+2020-06-08 14:32:03.769 INFO  [n.f.c.i.OFSwitchHandshakeHandler] Clearing flow tables of 00:00:00:00:00:00:00:03 on upcoming transition to MASTER.
+2020-06-08 14:32:03.771 INFO  [n.f.c.i.OFSwitchHandshakeHandler] Clearing flow tables of 00:00:00:00:00:00:00:02 on upcoming transition to MASTER.
+[1] switch added.
+[1] switch activated.
+[2] switch added.
+[2] switch activated.
+[3] switch added.
+[3] switch activated.
+2020-06-08 14:32:04.43 ERROR [n.f.c.i.OFSwitchHandshakeHandler] OFGroupModFailedErrorMsgVer13(xid=35, code=INVALID_GROUP, data=OFGroupDeleteVer13(xid=35, groupType=INDIRECT, group=all, buckets=[])) from switch OFSwitch DPID[00:00:00:00:00:00:00:03] in state net.floodlightcontroller.core.internal.OFSwitchHandshakeHandler$MasterState@13c851a8
+2020-06-08 14:32:04.44 ERROR [n.f.c.i.OFSwitchHandshakeHandler] OFGroupModFailedErrorMsgVer13(xid=39, code=INVALID_GROUP, data=OFGroupDeleteVer13(xid=39, groupType=INDIRECT, group=all, buckets=[])) from switch OFSwitch DPID[00:00:00:00:00:00:00:01] in state net.floodlightcontroller.core.internal.OFSwitchHandshakeHandler$MasterState@590fedb5
+2020-06-08 14:32:04.45 ERROR [n.f.c.i.OFSwitchHandshakeHandler] OFGroupModFailedErrorMsgVer13(xid=43, code=INVALID_GROUP, data=OFGroupDeleteVer13(xid=43, groupType=INDIRECT, group=all, buckets=[])) from switch OFSwitch DPID[00:00:00:00:00:00:00:02] in state net.floodlightcontroller.core.internal.OFSwitchHandshakeHandler$MasterState@1fc79ea5
+

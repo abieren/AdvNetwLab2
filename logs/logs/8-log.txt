@@ -1,0 +1,25 @@
+[1] ------->Port Status Event: switchNumber=1, portNumber=11, portStatus=DELETE
+[1] ------->Port Status Event: switchNumber=1, portNumber=12, portStatus=DELETE
+[1] ------->Port Status Event: switchNumber=1, portNumber=13, portStatus=DELETE
+[2] ------->Port Status Event: switchNumber=2, portNumber=11, portStatus=DELETE
+[2] ------->Port Status Event: switchNumber=2, portNumber=12, portStatus=DELETE
+[1] ------->Port Status Event: switchNumber=1, portNumber=2, portStatus=DELETE
+[2] ------->Port Status Event: switchNumber=2, portNumber=13, portStatus=DELETE
+[2] ------->Port Status Event: switchNumber=2, portNumber=3, portStatus=DELETE
+[2] ------->Port Status Event: switchNumber=2, portNumber=1, portStatus=DELETE
+[3] ------->Port Status Event: switchNumber=3, portNumber=2, portStatus=DELETE
+[3] ------->Port Status Event: switchNumber=3, portNumber=13, portStatus=DELETE
+[3] ------->Port Status Event: switchNumber=3, portNumber=11, portStatus=DELETE
+[3] ------->Port Status Event: switchNumber=3, portNumber=12, portStatus=DELETE
+[1] ------->Port Status Event: switchNumber=1, portNumber=3, portStatus=DELETE
+[3] ------->Port Status Event: switchNumber=3, portNumber=1, portStatus=DELETE
+[1] switch removed.
+[1] switch deactivated.
+2020-06-08 14:39:58.887 INFO  [n.f.c.i.OFChannelHandler] [[00:00:00:00:00:00:00:03(0x0) from 127.0.0.1:44067]] Disconnected connection
+[3] switch removed.
+[3] switch deactivated.
+2020-06-08 14:39:58.887 INFO  [n.f.c.i.OFChannelHandler] [[00:00:00:00:00:00:00:01(0x0) from 127.0.0.1:44065]] Disconnected connection
+[2] switch removed.
+[2] switch deactivated.
+2020-06-08 14:39:58.887 INFO  [n.f.c.i.OFChannelHandler] [[00:00:00:00:00:00:00:02(0x0) from 127.0.0.1:44066]] Disconnected connection
+

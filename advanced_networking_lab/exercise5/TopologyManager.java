@@ -1,14 +1,9 @@
 package advanced_networking_lab.exercise5;
 
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import org.projectfloodlight.openflow.protocol.OFFlowAdd;
-import org.projectfloodlight.openflow.protocol.OFPacketIn;
-import org.projectfloodlight.openflow.protocol.OFPacketOut;
-import org.projectfloodlight.openflow.protocol.OFPortDesc;
+import org.projectfloodlight.openflow.protocol.OFFlowDelete;
 import org.projectfloodlight.openflow.types.ArpOpcode;
 import org.projectfloodlight.openflow.types.DatapathId;
 import org.projectfloodlight.openflow.types.ICMPv4Type;
@@ -18,10 +13,6 @@ import org.projectfloodlight.openflow.types.OFPort;
 
 import javafx.util.Pair;
 import net.floodlightcontroller.core.IOFSwitch;
-import net.floodlightcontroller.core.internal.ISwitchDriverRegistry;
-import net.floodlightcontroller.packet.IPacket;
-import net.floodlightcontroller.packet.PacketParsingException;
-import net.floodlightcontroller.util.OFMessageUtils;
 
 public class TopologyManager
 {
@@ -45,9 +36,13 @@ public class TopologyManager
 		switches.put(sw.getId(), sw);
 	}
 	
-	public void setPort(DatapathId sw, OFPort port, boolean state)
+	public void onPortStateChanged(DatapathId sw, OFPort port, boolean state)
 	{
 		switchPortStateTable[(int) sw.getLong() - 1][port.getPortNumber() - 1] = state;
+		
+		// delete all flows when state of one port is changed.
+		// this allows to build new flows that are working with the new network state.
+		deleteAllFlows();
 	}
 	
 	public boolean isPortUp(DatapathId sw, OFPort port)
@@ -60,7 +55,6 @@ public class TopologyManager
 		return isPortUp(srcSwitch, OFPort.of((int) dstSwitch.getLong())) &&
 				isPortUp(dstSwitch, OFPort.of((int) srcSwitch.getLong()));
 	}
-	
 	
 	public void createARPFlow(IOFSwitch sw, DatapathId srcSwitch, OFPort srcPort, MacAddress srcMac, 
 			DatapathId dstSwitch, OFPort dstPort, MacAddress dstMac, ArpOpcode arpOpcode)
@@ -214,6 +208,8 @@ public class TopologyManager
 		}		
 	}
 	
+	// unused for now
+	/*
 	public boolean isSwitchPort(OFPort port)
 	{
 		int portNumber = port.getPortNumber();
@@ -285,5 +281,14 @@ public class TopologyManager
 			throw new RuntimeException("Port is not a host port nor a switch port.");
 		}
 	}
+	*/
 	
+	private void deleteAllFlows()
+	{
+		switches.values().forEach(x -> {
+			Pair<OFFlowDelete, String> flowDelete = MessageBuilderV13.buildFlowDeleteAllFlows(x);
+			OutputPrinter.println(x, flowDelete.getValue());
+			x.write(flowDelete.getKey());
+		});
+	}
 }

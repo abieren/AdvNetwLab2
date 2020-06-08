@@ -1,0 +1,10 @@
+[2] ------->Port Status Event: switchNumber=2, portNumber=1, portStatus=DOWN
+[1] ------->Flow Del Operation: switchNumber=1, matchFields=
+[2] ------->Flow Del Operation: switchNumber=2, matchFields=
+[3] ------->Flow Del Operation: switchNumber=3, matchFields=
+[1] ------->Port Status Event: switchNumber=1, portNumber=2, portStatus=DOWN
+[1] ------->Flow Del Operation: switchNumber=1, matchFields=
+[2] ------->Flow Del Operation: switchNumber=2, matchFields=
+[3] ------->Flow Del Operation: switchNumber=3, matchFields=
+[2] ------->Port Status Event: switchNumber=2, portNumber=1, portStatus=OTHER_UPDATE
+
